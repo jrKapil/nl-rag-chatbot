@@ -102,3 +102,16 @@ context-citation + advice-regex + refusal honesty.
 **Known tuning item (Phase 7):** retrieval gate passed the "unknown ICICI" query
 (0.5332 > 0.35) — the LLM refusal saved it (defense in depth). Threshold likely rises
 to ~0.5–0.6 after the full 10-query eval.
+
+## Phase 4 — Next.js App & UI (FR9) — 2026-11-08 — DONE
+
+- `web/app/page.tsx`: SSR welcome line, 3 example question links, "Facts-only. No investment advice." disclaimer, Chat client-component island
+- `web/app/api/ask/route.ts`: stub POST returning fixed `AskEnvelope` (ARCHITECTURE §6.1.8 shape)
+- `web/lib/prompts.ts`: SYSTEM_RULES + refusal/returns/not-found templates (Phase 5 consumes as-is)
+- `web/lib/envelope.ts`: shared `AnswerType` / `AskEnvelope` types
+- `web/app/components/Chat.tsx` + `chat.module.css`: input form, answer display with citation + type badge + "Last updated from sources" stamp
+- `web/.env.local.example`: env var reference for Phase 5
+- Verified: `npm run build` passes; `npm run dev` serves on :3000; `GET /` renders SSR content; `POST /api/ask` returns stub envelope
+- Exit gate met: UI renders, example links populate input via `?q=` navigation, submit calls `/api/ask`, stub envelope renders with citation + type badge
+
+## Phase 5 — next: real retrieval + generation in `web/app/api/ask/route.ts` (Pinecone REST + Groq + prompts.ts)

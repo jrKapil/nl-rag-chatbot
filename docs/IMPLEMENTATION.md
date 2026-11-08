@@ -125,11 +125,11 @@ python -m scripts.ingest --no-scrape     # FR12: rebuild index from raw
 **Goal:** A working UI page calling a stubbed `/api/ask`; SSR content enforced. No real pipeline yet.
 
 ### Tasks
-- [ ] `web/app/page.tsx`: welcome line, 3 clickable example questions (from PRD §9), persistent "Facts-only. No investment advice." note; chat input + answer area; render citation from `response.source` only.
-- [ ] Server-render the welcome line, examples, and disclaimer without JS (PRD requires visible SSR).
-- [ ] `web/app/api/ask/route.ts`: stub returning a fixed envelope (use the exact ARCHITECTURE §6.1.8 JSON shape — the UI should already speak the final schema).
-- [ ] `web/lib/prompts.ts`: write the final prompt/system-rules now (grounded-only, ≤3 sentences, exactly one URL from chunks, "Last updated from sources: <date>", refusal language) — text is cheap to get right early and Phase 5 consumes it as-is.
-- [ ] Message-state handling: no persistent chat log server-side (NFR).
+- [x] `web/app/page.tsx`: welcome line, 3 clickable example questions (from PRD §9), persistent "Facts-only. No investment advice." note; chat input + answer area; render citation from `response.source` only.
+- [x] Server-render the welcome line, examples, and disclaimer without JS (PRD requires visible SSR).
+- [x] `web/app/api/ask/route.ts`: stub returning a fixed envelope (use the exact ARCHITECTURE §6.1.8 JSON shape — the UI should already speak the final schema).
+- [x] `web/lib/prompts.ts`: write the final prompt/system-rules now (grounded-only, ≤3 sentences, exactly one URL from chunks, "Last updated from sources: <date>", refusal language) — text is cheap to get right early and Phase 5 consumes it as-is.
+- [x] Message-state handling: no persistent chat log server-side (NFR).
 
 ### Exit gate
 - UI renders, example buttons populate the input, submit calls `/api/ask`, and the stub envelope renders with citation + type badge. No function code yet — fine.
