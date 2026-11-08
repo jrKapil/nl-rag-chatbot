@@ -1,17 +1,66 @@
 /**
- * Retrieval for /api/ask (Phase 5 — Vercel-compatible).
+ * Retrieval for /api/ask (Phase 5).
  *
- * Query embedding via HuggingFace Inference API (sentence-transformers/all-MiniLM-L6-v2).
- * Avoids native modules (onnxruntime-node) that fail on Vercel's Lambda runtime.
- * Vector search via Pinecone REST against the hosted `mf-faq` index.
+ * Query embedding via @huggingface/transformers + ONNX all-MiniLM-L6-v2
+ * (same model family as fastembed ingestion — same vector space, guarded by
+ * the Phase 7 drift-eval gate). Vector search via Pinecone REST against the
+ * hosted `mf-faq` index (dim 384, cosine metric).
+ *
+ * Uses onnxruntime-web (via shim) instead of onnxruntime-node for Vercel
+ * compatibility. The shim redirects onnxruntime-node → onnxruntime-web.
  *
  * Hit shape mirrors the Python side:
  *   {id, cosine, text, url, scheme, section, scraped_at}
  */
 
-const EMB_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+import { pipeline } from "@huggingface/transformers"
+
+const EMB_MODEL = "Xenova/all-MiniLM-L6-v2" // ONNX-converted all-MiniLM-L6-v2 on HF Hub
 const DIM = 384
-const HF_INFERENCE_URL = `https://router.huggingface.co/hf-inference/models/${EMB_MODEL}`
+
+let _embedder: Awaited<ReturnType<typeof pipeline>> | null = null
+
+async function getEmbedder() {
+  if (_embedder) return _embedder
+  try {
+    _embedder = await pipeline("feature-extraction", EMB_MODEL, {
+      device: "cpu",
+    })
+  } catch (err) {
+    _embedder = null
+    throw err
+  }
+  return _embedder
+}
+
+function toFloats(tensor: any): number[] {
+  const data = tensor.data ?? tensor.tolist?.() ?? tensor
+  const flat: number[] = []
+  if (Array.isArray(data)) {
+    for (const row of data) {
+      if (Array.isArray(row)) flat.push(...row)
+      else flat.push(Number(row))
+    }
+  } else if (data && typeof data === "object" && Symbol.iterator in data) {
+    for (const v of data) flat.push(Number(v))
+  } else {
+    flat.push(Number(data))
+  }
+  return flat
+}
+
+export async function embedQuery(text: string): Promise<number[]> {
+  const model = await getEmbedder()
+  const output = await (model as any)(text, {
+    pooling: "mean",
+    normalize: true,
+  })
+  const vec = toFloats(output)
+  if (vec.length !== DIM) {
+    throw new Error(`embedding dim mismatch: expected ${DIM}, got ${vec.length}`)
+  }
+  return vec
+}
 
 function env(key: string, fallback?: string): string {
   const v = (process.env as Record<string, string>)[key]
@@ -21,61 +70,18 @@ function env(key: string, fallback?: string): string {
   return v ?? fallback!
 }
 
-export async function embedQuery(text: string): Promise<number[]> {
-  const hfToken = (process.env as Record<string, string>).HF_TOKEN
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  }
-  if (hfToken) {
-    headers["Authorization"] = `Bearer ${hfToken}`
-  }
-
-  // Retry up to 3 times (HF Inference cold-starts the model on first request)
-  let lastError: Error | null = null
-  for (let attempt = 0; attempt < 3; attempt++) {
-    let res: Response
-    try {
-      res = await fetch(HF_INFERENCE_URL, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({ inputs: text }),
-      })
-    } catch (err) {
-      lastError = new Error(`HF Inference fetch failed: ${err instanceof Error ? err.message : String(err)}`)
-      await new Promise((r) => setTimeout(r, 2000))
-      continue
-    }
-    if (res.status === 503) {
-      // Model loading — wait and retry
-      await new Promise((r) => setTimeout(r, 5000))
-      continue
-    }
-    if (!res.ok) {
-      const body = await res.text().catch(() => "")
-      throw new Error(`HF Inference ${res.status}: ${body.slice(0, 300)}`)
-    }
-    const data = await res.json()
-    // HF Inference returns [[...384 floats]] for a single input
-    const vec: number[] = Array.isArray(data[0]) ? data[0] : data
-    if (vec.length !== DIM) {
-      throw new Error(`embedding dim mismatch: expected ${DIM}, got ${vec.length}`)
-    }
-    // normalize (HF returns unnormalized embeddings; fastembed normalizes)
-    const norm = Math.sqrt(vec.reduce((s, v) => s + v * v, 0))
-    return vec.map((v) => v / norm)
-  }
-  throw lastError ?? new Error("HF Inference: max retries exceeded")
-}
+const PINECONE_API_KEY = env("PINECONE_API_KEY")
+const PINECONE_HOST = env("PINECONE_HOST")
+const PINECONE_INDEX = env("PINECONE_INDEX", "mf-faq")
+const API_VERSION = "2025-04"
 
 function pineconeHeaders(): HeadersInit {
   return {
-    "Api-Key": env("PINECONE_API_KEY"),
-    "X-Pinecone-API-Version": "2025-04",
+    "Api-Key": PINECONE_API_KEY,
+    "X-Pinecone-API-Version": API_VERSION,
     "Content-Type": "application/json",
   }
 }
-
-const PINECONE_HOST = env("PINECONE_HOST")
 
 export interface ChunkHit {
   id: string
