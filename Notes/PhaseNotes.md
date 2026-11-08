@@ -103,6 +103,22 @@ context-citation + advice-regex + refusal honesty.
 (0.5332 > 0.35) — the LLM refusal saved it (defense in depth). Threshold likely rises
 to ~0.5–0.6 after the full 10-query eval.
 
+## Phase 6 — Guardrails (FR6–FR8) — 2026-11-08 — DONE
+
+- `web/lib/guardrails.ts`: PII filter (PAN, Aadhaar, email, OTP, account #),
+  intent classifier (advice/returns/factual), scrubPii, runGuardrails (ordered:
+  PII → intent → RAG), refusal templates (advice/PII/returns/not-found)
+- `web/app/api/ask/route.ts`: runs guardrails before any upstream call; PII
+  refusal → refusal_pii, advice → refusal_advice, returns → returns_redirect;
+  zero LLM calls on refusal paths; scrubbed logging
+- `tests/ts/guardrails.test.ts` (vitest): 25 tests — PII detection, intent
+  classification, scrubPii, PRD §8 refusal table, adversarial variants
+- UI polish: globals.css design tokens, dark mode, page.module.css card layout,
+  chat.module.css spinner + type badges + fade-in, example chips, disclaimer
+- Exit gate met: all 4 PRD §8 refusal classes exact, zero advice/returns/PII
+  violations; 6/6 E2E through /api/ask still pass
+- Verified: `npm run build` passes; `npx vitest run` 25/25 pass
+
 ## Phase 4 — Next.js App & UI (FR9) — 2026-11-08 — DONE
 
 - `web/app/page.tsx`: SSR welcome line, 3 example question links, "Facts-only. No investment advice." disclaimer, Chat client-component island
