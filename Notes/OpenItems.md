@@ -4,10 +4,10 @@ Tracks ARCHITECTURE.md §14 open items + IMPLEMENTATION.md phase-dependent crede
 
 ## Phase 0 — credentials (user actions)
 
-- [ ] **Groq API key** — created at console.groq.com → API Keys.
+- [x] **Groq API key** — created at console.groq.com → API Keys.
       - Model default `openai/gpt-oss-120b`; verify it appears as available for your org at deploy time (`console.groq.com/docs/models`).
       - Free plan limits (verified 2026-11-08): 30 RPM / 1,000 RPD / 8K TPM / 200K TPD.
-- [ ] **Pinecone account** — created at app.pinecone.io (serverless free tier).
+- [x] **Pinecone account** — created at app.pinecone.io (serverless free tier).
       - Findings recorded below once signed up:
         - Index name `mf-faq`, host `mf-faq-3cgjwss.svc.aped-4627-b74a.pinecone.io` (created 2026-11-08).
         - Index dim 384, metric cosine, serverless AWS us-east-1.
@@ -24,9 +24,17 @@ Tracks ARCHITECTURE.md §14 open items + IMPLEMENTATION.md phase-dependent crede
 
 ## Phase 3 — during cloud switch
 
-- [ ] Confirm Pinecone write path from Python client (explicit embeddings upload, no auto-embed).
-- [ ] Confirm Pinecone serverless index ready + 95/95 vector parity (done 2026-11-08).
-- [ ] TS client connection test against Pinecone index host (REST, `web/app/api/ask` Phase 5).
+- [x] Confirm Pinecone write path from Python client (explicit embeddings upload, no auto-embed).
+- [x] Confirm Pinecone serverless index ready + 95/95 vector parity (done 2026-11-08).
+- [x] TS client connection test against Pinecone index host (REST, `web/app/api/ask` Phase 5).
+
+## Phase 9 — deliverables
+
+- [x] README.md created at repo root (setup, scope, architecture, limitations, env ref, disclaimer snippet D5)
+- [x] data/sources.csv + data/sources.md (D2) — exactly 5 whitelisted URLs
+- [x] data/qa_samples.json (D4) — 10 queries + envelopes + pass/fail
+- [x] D5 disclaimer snippet marked in README with file path `web/app/page.tsx`
+- [ ] D1: Public Vercel link — to be added by user after deploy (Phase 8)
 
 ## Phase 8 / §14.3 — before public link goes live — deploy-day checklist
 

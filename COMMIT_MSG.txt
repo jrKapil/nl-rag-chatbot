@@ -1,10 +1,10 @@
-Phase 7: Evaluation gate — 10/10 pass, RECURSIVE SHIPS
+Phase 9: Deliverables & polish (D1–D5)
 
-- scripts/eval_qa.py: 10-query PRD §8 eval set, paces requests 3s apart,
-  writes data/qa_samples.json (D4), prints pass/fail table
-- Results: 10/10 PASS (5 factual + 5 refusal/out-of-scope)
-- Chunking gate: RECURSIVE SHIPS (5/5 factual recall = 100%)
-- SIM_THRESHOLD=0.35 confirmed adequate (all factual queries passed gate)
-- No advice/returns/PII violations
-- Refusal queries: 5/5 exact (advice, PII, returns, 2x not_found)
-- Notes/PhaseNotes.md + docs/IMPLEMENTATION.md updated
+- README.md: setup steps, scope (1 AMC + 4 schemes), architecture summary,
+  FR12 reindex commands, known limitations, env var reference
+- D2: data/sources.csv + data/sources.md (5 whitelisted URLs)
+- D4: data/qa_samples.json (10 queries + envelopes + pass/fail, 10/10 PASS)
+- D5: "Facts-only. No investment advice." disclaimer in README + web/app/page.tsx
+- docs/IMPLEMENTATION.md: Phase 9 checkboxes ticked
+- Notes/OpenItems.md + Notes/PhaseNotes.md: Phase 9 entries, all phases complete
+- All phases (0–9) exit gates verified; recursive chunking ships

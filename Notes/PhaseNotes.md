@@ -103,6 +103,17 @@ context-citation + advice-regex + refusal honesty.
 (0.5332 > 0.35) — the LLM refusal saved it (defense in depth). Threshold likely rises
 to ~0.5–0.6 after the full 10-query eval.
 
+## Phase 9 — Deliverables & Polish (D1–D5) — 2026-11-08 — DONE
+
+- README.md created at repo root (D3): setup steps, scope, architecture, limitations, env var reference, D5 disclaimer snippet
+- data/sources.csv + data/sources.md (D2): exactly 5 whitelisted URLs
+- data/qa_samples.json (D4): 10 queries + envelopes + pass/fail (10/10 PASS)
+- D5: "Facts-only. No investment advice." in README + `web/app/page.tsx`
+- Phase 7 eval gate: 10/10 PASS, RECURSIVE SHIPS
+- Phase 6 guardrails: 25/25 vitest tests pass
+- Phase 5 real pipeline: 6/6 E2E through /api/ask
+- All phases complete; ready for tag v1.0.milestone after deploy (D1)
+
 ## Phase 7 — Evaluation Gate (all FRs) — 2026-11-08 — DONE
 
 - `scripts/eval_qa.py`: 10-query PRD §8 eval set, paces requests 3s apart, writes `data/qa_samples.json` (D4)

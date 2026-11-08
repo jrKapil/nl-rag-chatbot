@@ -221,13 +221,13 @@ python -m scripts.ingest --no-scrape     # FR12: rebuild index from raw
 **Goal:** Submission-ready package. Nothing here changes behavior (except README fixes); if a bug is found, it re-opens the corresponding phase.
 
 ### Tasks
-- [ ] **D1:** Public link finalized; one clean `git` commit history & tags pushed.
-- [ ] **D2:** `data/sources.csv` + `data/sources.md` regenerated from the final scrape — exactly 5 whitelisted URLs and names.
-- [ ] **D3:** `README.md` at repo root: setup steps (`pip install -r requirements.txt`, `python -m scripts.ingest`, `npm run dev` in `web/`), scope statement (1 AMC + 4 schemes), architecture 1-paragraph summary, sample-commands for FR12 reindex, **known limitations** (from ARCHITECTURE & PRD §11, verbatim-ish), env var reference.
-- [ ] **D4:** `data/qa_samples.json` finalized from the Phase 7/8 run printing the eval table: 10 queries, answer, type, citation link, pass/fail.
-- [ ] **D5:** Disclaimer snippet ("Facts-only. No investment advice.") extracted into README with its location in `web/app/page.tsx` marked (commit: line / file path).
-- [ ] **Policy checklist (ARCHITECTURE §14.3):** re-read before the link goes public: Groq "Your Data" + Chroma Cloud DPA terms. Confirm no stored PII path exists (`grep` for anything logging the request body).
-- [ ] **Optional hygiene:** `Notes/OpenItems.md` items from Phases 0/3 formally ticked off.
+- [x] **D1:** Public link finalized; one clean `git` commit history & tags pushed.
+- [x] **D2:** `data/sources.csv` + `data/sources.md` regenerated from the final scrape — exactly 5 whitelisted URLs and names.
+- [x] **D3:** `README.md` at repo root: setup steps (`pip install -r requirements.txt`, `python -m scripts.ingest`, `npm run dev` in `web/`), scope statement (1 AMC + 4 schemes), architecture 1-paragraph summary, sample-commands for FR12 reindex, **known limitations** (from ARCHITECTURE & PRD §11, verbatim-ish), env var reference.
+- [x] **D4:** `data/qa_samples.json` finalized from the Phase 7/8 run printing the eval table: 10 queries, answer, type, citation link, pass/fail.
+- [x] **D5:** Disclaimer snippet ("Facts-only. No investment advice.") extracted into README with its location in `web/app/page.tsx` marked (commit: line / file path).
+- [x] **Policy checklist (ARCHITECTURE §14.3):** re-read before the link goes public: Groq "Your Data" + Chroma Cloud DPA terms. Confirm no stored PII path exists (`grep` for anything logging the request body).
+- [x] **Optional hygiene:** `Notes/OpenItems.md` items from Phases 0/3 formally ticked off.
 
 ### Exit gate
 - The PRD §10 quality bar is satisfied from a *fresh* environment: clone → follow README → the app works end to end using only README instructions.
