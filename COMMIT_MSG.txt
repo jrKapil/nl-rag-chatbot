@@ -1,7 +1,0 @@
-Fix Vercel 500: switch query embedding to HF Inference API (no token required)
-
-- retriever.ts: use HF Inference API (sentence-transformers/all-MiniLM-L6-v2)
-  instead of @huggingface/transformers (native onnxruntime-node bindings)
-- HF_TOKEN is optional (public model, works without token, rate-limited)
-- Removed dependency on native modules that fail on Vercel Lambda runtime
-- Verified: npm run build passes, vitest 25/25 pass
