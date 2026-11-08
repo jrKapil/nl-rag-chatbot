@@ -1,9 +1,0 @@
-Fix Vercel onnxruntime-node error: switch query embedding to HF Inference API
-
-- retriever.ts: replace transformers.js (onnxruntime-node native bindings)
-  with HF Inference API (sentence-transformers/all-MiniLM-L6-v2)
-- next.config.ts: revert serverExternalPackages/outputFileTracingIncludes (no longer needed)
-- package.json: remove @huggingface/transformers + onnxruntime-node deps
-- .env.local.example (root + web): add HF_TOKEN env var
-- Avoids native module bundling issues on Vercel Lambda runtime
-- Verified: npm run build passes, vitest 25/25 pass
