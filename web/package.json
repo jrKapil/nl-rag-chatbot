@@ -9,9 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@huggingface/transformers": "^4.3.2",
     "next": "16.5.0-canary.36",
-    "onnxruntime-node": "^1.31.1",
     "react": "19.3.1",
     "react-dom": "19.3.1"
   },

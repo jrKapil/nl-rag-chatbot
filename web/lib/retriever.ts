@@ -1,65 +1,17 @@
 /**
- * Retrieval for /api/ask (Phase 5).
+ * Retrieval for /api/ask (Phase 5 — Vercel-compatible).
  *
- * Query embedding via @huggingface/transformers + ONNX all-MiniLM-L6-v2
- * (same model family as fastembed ingestion — same vector space, guarded by
- * the Phase 7 drift-eval gate). Vector search via Pinecone REST against the
- * hosted `mf-faq` index (dim 384, cosine metric).
+ * Query embedding via HuggingFace Inference API (sentence-transformers/all-MiniLM-L6-v2).
+ * Avoids native modules (onnxruntime-node) that fail on Vercel's Lambda runtime.
+ * Vector search via Pinecone REST against the hosted `mf-faq` index.
  *
  * Hit shape mirrors the Python side:
  *   {id, cosine, text, url, scheme, section, scraped_at}
  */
 
-import { pipeline } from "@huggingface/transformers"
-
-const EMB_MODEL = "Xenova/all-MiniLM-L6-v2" // ONNX-converted all-MiniLM-L6-v2 on HF Hub
+const EMB_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 const DIM = 384
-
-let _embedder: Awaited<ReturnType<typeof pipeline>> | null = null
-
-async function getEmbedder() {
-  if (_embedder) return _embedder
-  try {
-    _embedder = await pipeline("feature-extraction", EMB_MODEL, {
-      device: "cpu",
-    })
-  } catch (err) {
-    // Keep _embedder null so a later request retries the load
-    _embedder = null
-    throw err
-  }
-  return _embedder
-}
-
-function toFloats(tensor: any): number[] {
-  // transformers.js feature-extraction output may be 1-D [384] or 2-D [1,384]
-  const data = tensor.data ?? tensor.tolist?.() ?? tensor
-  const flat: number[] = []
-  if (Array.isArray(data)) {
-    for (const row of data) {
-      if (Array.isArray(row)) flat.push(...row)
-      else flat.push(Number(row))
-    }
-  } else if (data && typeof data === "object" && Symbol.iterator in data) {
-    for (const v of data) flat.push(Number(v))
-  } else {
-    flat.push(Number(data))
-  }
-  return flat
-}
-
-export async function embedQuery(text: string): Promise<number[]> {
-  const model = await getEmbedder()
-  const output = await (model as any)(text, {
-    pooling: "mean",
-    normalize: true,
-  })
-  const vec = toFloats(output)
-  if (vec.length !== DIM) {
-    throw new Error(`embedding dim mismatch: expected ${DIM}, got ${vec.length}`)
-  }
-  return vec
-}
+const HF_INFERENCE_URL = `https://api-inference.huggingface.co/models/${EMB_MODEL}`
 
 function env(key: string, fallback?: string): string {
   const v = (process.env as Record<string, string>)[key]
@@ -69,18 +21,40 @@ function env(key: string, fallback?: string): string {
   return v ?? fallback!
 }
 
-const PINECONE_API_KEY = env("PINECONE_API_KEY")
-const PINECONE_HOST = env("PINECONE_HOST")
-const PINECONE_INDEX = env("PINECONE_INDEX", "mf-faq")
-const API_VERSION = "2025-04"
+export async function embedQuery(text: string): Promise<number[]> {
+  const hfToken = env("HF_TOKEN")
+  const res = await fetch(HF_INFERENCE_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${hfToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ inputs: text }),
+  })
+  if (!res.ok) {
+    const body = await res.text().catch(() => "")
+    throw new Error(`HF Inference ${res.status}: ${body.slice(0, 300)}`)
+  }
+  const data = await res.json()
+  // HF Inference returns [[...384 floats]] for a single input
+  const vec: number[] = Array.isArray(data[0]) ? data[0] : data
+  if (vec.length !== DIM) {
+    throw new Error(`embedding dim mismatch: expected ${DIM}, got ${vec.length}`)
+  }
+  // normalize (HF returns unnormalized embeddings; fastembed normalizes)
+  const norm = Math.sqrt(vec.reduce((s, v) => s + v * v, 0))
+  return vec.map((v) => v / norm)
+}
 
 function pineconeHeaders(): HeadersInit {
   return {
-    "Api-Key": PINECONE_API_KEY,
-    "X-Pinecone-API-Version": API_VERSION,
+    "Api-Key": env("PINECONE_API_KEY"),
+    "X-Pinecone-API-Version": "2025-04",
     "Content-Type": "application/json",
   }
 }
+
+const PINECONE_HOST = env("PINECONE_HOST")
 
 export interface ChunkHit {
   id: string
@@ -96,16 +70,15 @@ export async function queryPinecone(
   vector: number[],
   topK: number,
 ): Promise<ChunkHit[]> {
-  const body = JSON.stringify({
-    vector,
-    topK,
-    includeMetadata: true,
-    namespace: "",
-  })
   const res = await fetch(`https://${PINECONE_HOST}/query`, {
     method: "POST",
     headers: pineconeHeaders(),
-    body,
+    body: JSON.stringify({
+      vector,
+      topK,
+      includeMetadata: true,
+      namespace: "",
+    }),
   })
   if (!res.ok) {
     throw new Error(`Pinecone query ${res.status}: ${await res.text()}`)
