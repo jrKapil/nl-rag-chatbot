@@ -1,8 +1,0 @@
-Fix Vercel 500: use onnxruntime-node shim -> onnxruntime-web (WASM)
-
-- retriever.ts: restored transformers.js (ONNX all-MiniLM-L6-v2) with
-  onnxruntime-node shim redirecting to onnxruntime-web (WASM)
-- next.config.ts: turbopack resolveAlias onnxruntime-node -> shim.cjs
-- shim: lib/onnxruntime-node-shim.cjs exports onnxruntime-web
-- Avoids native .node binaries that fail on Vercel Lambda runtime
-- Verified: npm run build passes, vitest 25/25 pass, E2E /api/ask works
