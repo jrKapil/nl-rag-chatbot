@@ -1,0 +1,23 @@
+# requirements.txt — Python 3.11+ (runtime: 3.14 on dev machine)
+# Installed only on the dev machine (ingestion + eval are offline jobs).
+
+# --- HTTP fetch (Phase 1) ---
+requests>=2.32
+beautifulsoup4>=4.12
+lxml>=5.0
+
+# --- Embeddings (Phase 2) ---
+# exact model: onnx/all-MiniLM-L6-v2 (same ONNX export the TS side uses — ARCHITECTURE §5.4)
+fastembed>=0.6
+
+# --- Vector store (Phase 2 local-mode / Phase 3 cloud) ---
+chromadb>=1.0
+
+# --- Chunking (Phase 2) ---
+langchain-text-splitters>=0.3
+
+# --- Testing ---
+pytest>=8.0
+
+# --- Utilities ---
+pandas>=2.2

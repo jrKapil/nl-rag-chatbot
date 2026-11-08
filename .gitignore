@@ -1,0 +1,27 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# --- Node / Next.js ---
+node_modules/
+web/.next/
+web/out/
+next-env.d.ts
+
+# --- Project artifacts (produced, never committed) ---
+data/*
+!data/qa_samples.json
+
+# --- Secrets ---
+.env
+.env.local
+.env.*.local
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
