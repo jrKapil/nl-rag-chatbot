@@ -18,7 +18,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from config.sources import SOURCE_PAGES
 from ingestion.chunk import build_chunk_records
-from ingestion.embed_store import collection_stats, upsert_chunks
+from ingestion.embed_store import collection_stats, embed, upsert_chunks
+from ingestion.export_chunks import export_all
 
 
 def load_section_files() -> list[dict]:
@@ -47,7 +48,9 @@ def run(scrape_first: bool) -> None:
         print("[ingest] nothing to ingest — run scrape first")
         return
     records = [r for page in pages for r in build_chunk_records(page, page["sections"])]
-    n = upsert_chunks(records)
+    vectors = embed([r["text"] for r in records])
+    n, _ = upsert_chunks(records, vectors)
+    export_all(records, vectors)
     print(f"[ingest] pages ingested: {len(pages)} | chunks stored: {n}")
     print(f"[ingest] per page: " + ", ".join(f"{p['slug']}={sum(p['slug'] in r['id'] for r in records)}" for p in pages))
 

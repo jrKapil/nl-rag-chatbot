@@ -72,16 +72,19 @@ def new_collection(client: chromadb.ClientAPI):
     )
 
 
-def upsert_chunks(records: list[dict]) -> int:
-    """Embed + add chunk records into a freshly created mf_faq collection."""
+def upsert_chunks(records: list[dict], vectors: list[list[float]] | None = None) -> tuple[int, list[list[float]]]:
+    """Embed (if not given) + add chunk records into a fresh mf_faq collection.
+
+    Returns (count, vectors) so callers can export the same vectors.
+    """
     if not records:
-        return 0
+        return 0, []
     client = get_chroma_client()
     coll = new_collection(client)
     ids = [r["id"] for r in records]
     docs = [r["text"] for r in records]
     metas = [r["metadata"] for r in records]
-    vecs = embed(docs)
+    vecs = vectors if vectors is not None else embed(docs)
 
     # chroma caps batch sizes; add in slices of 500
     B = 500
@@ -89,7 +92,7 @@ def upsert_chunks(records: list[dict]) -> int:
         coll.add(ids=ids[i:i + B], embeddings=vecs[i:i + B],
                  documents=docs[i:i + B], metadatas=metas[i:i + B])
     print(f"[embed_store] added {len(ids)} chunks to collection {COLLECTION_NAME!r}")
-    return len(ids)
+    return len(ids), vecs
 
 
 def collection_stats() -> dict:

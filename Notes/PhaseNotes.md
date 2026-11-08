@@ -4,9 +4,22 @@
 
 **Commands that work:**
 - `python -m ingestion.scrape` — full safe pass (fetch + clean + persist + D2)
-- `python -m scripts.retext` — rebuild .txt/sections from stored HTML, no network
+- `python -m scripts.retext` — rebuild .txt/sections from stored HTML, then re-index
 - `python -m scripts.ingest --no-scrape` — FR12 reindex from raw
 - `python -m scripts.smoke_query.py` — local retrieval smoke (3 known-answer queries)
+
+**Chunk/embedding exports (updated in same run as ingest):**
+- `data/chunks/chunks.txt` — human-readable dump: id, url, scheme, section, metadata + full text
+- `data/chunks/chunks.jsonl` — one JSON line per chunk WITH the 384-dim embedding
+  (self-contained: full index reproducible from this file alone)
+
+**Inspecting ChromaDB locally:**
+- `python -m scripts.show_index` — collection stats + per-page chunk counts + previews
+- `python -m scripts.show_index --page large-cap` — filter by slug/scheme substring
+- `python -m scripts.show_index --id <slug>::<n> [--vector]` — one chunk, optional embedding
+- `python -m scripts.show_index --query "..." --k 5` — embed query + top-k hits w/ cosines
+- `--full` prints complete text; add `--cloud` reads CHROMA_* env vars instead of local store
+
 
 **Index stats (final after tuning):**
 - 95 chunks @384 dims; per page: AMC=12, Large Cap=19, Flexi/Equity=22, ELSS=20, Mid Cap=22
