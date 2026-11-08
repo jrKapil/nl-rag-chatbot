@@ -1,5 +1,13 @@
 # Phase Notes — per-phase observations (retrieval tuning + report material)
 
+**Migration 2026-11-08 — Chroma → Pinecone (vector DB swap):**
+Chroma Cloud stopped accepting new signups, so the hosted store switched to Pinecone serverless
+(free tier), index `mf-faq`, dim 384, cosine metric, AWS us-east-1. All 95 chunk vectors were
+reused verbatim from `data/chunks/chunks.jsonl` (baked at ingestion — no re-embedding), giving
+bit-identical vectors and retrieval results to the local Chroma index. E2E smoke 6/6 PASS against
+Pinecone via `scripts/test_answer.py` (VECTOR_DB=pinecone). Local Chroma (`CHROMA_MODE=local`)
+kept intact for dev tooling; `scripts/show_index.py` unchanged.
+
 ## Phase 2 — Ingestion pipeline (2026-11-08)
 
 **Commands that work:**

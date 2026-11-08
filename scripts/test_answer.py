@@ -29,11 +29,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-from ingestion.embed_store import embed, get_chroma_client  # noqa: E402
+from ingestion.embed_store import embed  # noqa: E402  (query embedding, fixed model)
 from config.sources import SOURCE_PAGES, is_whitelisted_url  # noqa: E402
 
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
-COLLECTION = "mf_faq"
 
 SYSTEM_PROMPT = """You answer questions about HDFC mutual funds using ONLY the numbered context passages provided.
 
@@ -68,22 +67,8 @@ def load_env() -> None:
 
 
 def retrieve(query: str, k: int) -> dict:
-    client = get_chroma_client()
-    coll = client.get_collection(COLLECTION)
-    vec = embed([query])[0]
-    res = coll.query(query_embeddings=[vec], n_results=k,
-                     include=["documents", "metadatas", "distances"])
-    hits = []
-    for i in range(len(res["ids"][0])):
-        hits.append({
-            "id": res["ids"][0][i],
-            "cosine": 1.0 - res["distances"][0][i],
-            "text": res["documents"][0][i],
-            "url": res["metadatas"][0][i]["url"],
-            "scheme": res["metadatas"][0][i]["scheme_name"],
-            "section": res["metadatas"][0][i]["section"],
-        })
-    return {"query": query, "hits": hits}
+    from ingestion.retrieve import query_top_k  # backend switch: VECTOR_DB env
+    return {"query": query, "hits": query_top_k(query, k)}
 
 
 def build_context(hits: list[dict]) -> str:
@@ -223,7 +208,7 @@ def main() -> None:
     for label, q in CASES:
         run_case(label, q, k, sim_threshold)
     print(f"\n[master] env: model={os.environ.get('GROQ_MODEL')} k={k} threshold={sim_threshold} "
-          f"mode={os.environ.get('CHROMA_MODE')}")
+          f"mode={os.environ.get('CHROMA_MODE')} vector_db={os.environ.get('VECTOR_DB')}")
 
 
 if __name__ == "__main__":

@@ -5,6 +5,8 @@
 **Derived from:** [`Docs/PRD.md`](./PRD.md) v1.0
 **Status:** Approved basis for implementation
 **Changelog:** v1.2 — locked **all-serverless**: Vercel + Chroma Cloud + Groq; no container host. FastAPI backend replaced by a Next.js route handler; query embeddings run in-function via the ONNX export of the mandated model.
+
+**Changelog (v1.3):** 2026-11-08 — hosted vector store switched from Chroma Cloud to **Pinecone serverless** (Chroma Cloud not accepting new signups at integration time). Index `mf-faq`, dim 384, cosine, AWS us-east-1. Vectors copied verbatim from `data/chunks/chunks.jsonl`; no re-embedding, identical retrieval. `VECTOR_DB=chroma|pinecone` switch; local Chroma kept for dev tooling.
 **Changelog (v1.1):** Vercel + Groq adopted; Ollama/Streamlit dropped.
 
 ---
@@ -18,7 +20,7 @@ A facts-only mutual-fund FAQ chatbot implementing a classic two-stage RAG pipeli
 | App (UI + `/api/ask` functions) | **Next.js on Vercel** (one repo, one deploy) |
 | LLM | **Groq API** (free tier), default `openai/gpt-oss-120b`, OpenAI-compatible endpoint |
 | Embeddings | **`sentence-transformers/all-MiniLM-L6-v2` (mandated)** via its official ONNX export: `fastembed` in Python for ingestion, `@huggingface/transformers` in the Vercel function for query embedding |
-| Vector DB | **Chroma Cloud** (serverless Chroma; GA Aug 2025, free start; same Chroma API). Ingestion writes from Python client; query reads from JS client |
+| Vector DB | **Pinecone serverless** (index `mf-faq`, dim 384, cosine; `CHROMA_MODE=local` kept for dev). Ingestion writes via Pinecone REST from Python client; query reads via Pinecone REST from JS client |
 | Ingestion | Local/offline Python scripts (no server needed anywhere) |
 
 **No containers, no Render, no HF Space, no always-on process.** Local development is the identical code path (Next.js dev server; ingestion scripts unchanged).
