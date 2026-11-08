@@ -74,6 +74,13 @@ export default function Chat({ initialQuestion }: ChatProps) {
         {error && <p className={styles.error}>{error}</p>}
       </form>
 
+      {loading && (
+        <div className={styles.loading}>
+          <span className={styles.spinner} />
+          Thinking…
+        </div>
+      )}
+
       {answer && (
         <section className={styles.answer}>
           <h2 className={styles.answerTitle}>Answer</h2>
@@ -85,6 +92,11 @@ export default function Chat({ initialQuestion }: ChatProps) {
             {answer.updated && (
               <span className={styles.updated}>
                 Last updated from sources: {answer.updated}
+              </span>
+            )}
+            {answer.chunks_used > 0 && (
+              <span className={styles.chunks}>
+                {answer.chunks_used} chunks retrieved
               </span>
             )}
           </div>

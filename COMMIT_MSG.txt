@@ -1,15 +1,22 @@
-Phase 5: Real retrieval + generation in /api/ask (FR3–FR5, FR10, FR11)
+Phase 6: Guardrails (FR6–FR8) + UI polish
 
-- web/app/api/ask/route.ts: full RAG path — PII pre-filter → Pinecone
-  top-k (k=4) → grounding gate (SIM_THRESHOLD) → Groq (qwen/qwen3.8-27b)
-  → post-checks (≤3 sentences, strip stray URLs, freshness-stamp separation)
-  → exact ARCHITECTURE §6.1.8 envelope; rate-limited → type=rate_limited
-- web/lib/retriever.ts: embedQuery via transformers.js ONNX all-MiniLM-L6-v2
-  (same vector space as Python fastembed ingest) → Pinecone REST query;
-  returns {hits, gatePassed}
-- web/lib/llm.ts: OpenAI-compatible Groq client with Cloudflare-safe UA and
-  one 429 retry honoring retry-after
-- web/tsconfig.json: ES2020 target (regex flags)
-- web/package.json / package-lock.json: @huggingface/transformers added
-- verified: `npm run build` passes; all 6 E2E cases through /api/ask
-  (4 factual, advice refusal, out-of-scope not_found) with correct types
+Guardrails:
+- web/lib/guardrails.ts: PII filter (PAN, Aadhaar, email, OTP, account #),
+  intent classifier (advice/returns/factual), scrubPii, runGuardrails (ordered:
+  PII → intent → RAG), refusal templates (advice/PII/returns/not-found)
+- web/app/api/ask/route.ts: runs guardrails before any upstream call; PII
+  refusal → refusal_pii, advice → refusal_advice, returns → returns_redirect;
+  zero LLM calls on refusal paths; scrubbed logging
+- tests/ts/guardrails.test.ts (vitest): 25 tests — PII detection, intent
+  classification, scrubPii, PRD §8 refusal table, adversarial variants
+
+UI improvement:
+- globals.css: design tokens (colors, shadows, radius), dark mode
+- page.module.css: centered card layout, gradient title, disclaimer banner,
+  example chips with hover, footer
+- chat.module.css: input focus ring, loading spinner, type badge variants,
+  answer fade-in, dark mode polish
+- page.tsx + Chat.tsx: header, footer, chunks_used count display
+
+Verified: npm run build passes, 25/25 vitest tests pass, all 6 E2E cases
+through /api/ask still pass (factual + refusal_advice + not_found + returns_redirect)

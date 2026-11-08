@@ -8,7 +8,6 @@ export const metadata: Metadata = {
     "Ask factual questions about HDFC Mutual Fund schemes. Answers are grounded in indexed Groww pages with a cited source link.",
 }
 
-// Blocking prerender: we read searchParams to pre-fill the input from example links.
 export const instant = false
 
 const EXAMPLES = [
@@ -27,31 +26,48 @@ export default async function Home({
     typeof sp.q === "string" ? sp.q : Array.isArray(sp.q) ? sp.q[0] : undefined
 
   return (
-    <main className={styles.page}>
-      <h1 className={styles.welcome}>
-        Ask factual questions about HDFC Mutual Fund schemes.
-      </h1>
-      <p className={styles.intro}>
-        Answers come from 5 indexed Groww pages — HDFC Mutual Fund overview plus
-        Large Cap, Flexi Cap, ELSS Tax Saver, and Mid Cap funds. Every factual
-        answer carries one cited source link.
-      </p>
-      <div className={styles.disclaimer}>
-        <strong>Facts-only. No investment advice.</strong>
+    <div className={styles.shell}>
+      <div className={styles.container}>
+        <header className={styles.header}>
+          <h1 className={styles.title}>HDFC Mutual Fund FAQ</h1>
+          <p className={styles.subtitle}>
+            Ask factual questions about HDFC Mutual Fund schemes. Answers are
+            grounded in 5 indexed Groww pages and carry one cited source link.
+          </p>
+        </header>
+
+        <div className={styles.disclaimer}>
+          <span className={styles.disclaimerIcon}>ℹ️</span>
+          <strong>Facts-only. No investment advice.</strong>
+          <span style={{ marginLeft: 6, fontWeight: 400 }}>
+            This assistant does not recommend buys or sells, compare returns, or
+            handle personal data.
+          </span>
+        </div>
+
+        <div className={styles.examples}>
+          <span className={styles.examplesLabel}>Try:</span>
+          {EXAMPLES.map((q) => (
+            <a
+              key={q}
+              href={`?q=${encodeURIComponent(q)}`}
+              className={styles.exampleChip}
+            >
+              {q}
+            </a>
+          ))}
+        </div>
+
+        <div className={styles.card}>
+          <div className={styles.cardTitle}>Chat</div>
+          <Chat initialQuestion={initialQ} />
+        </div>
+
+        <footer className={styles.footer}>
+          Knowledge frozen at scrape time · 5 whitelisted Groww pages ·
+          Embeddings: MiniLM-L6-v2 · Vector store: Pinecone
+        </footer>
       </div>
-      <div className={styles.examples}>
-        <span className={styles.examplesLabel}>Try:</span>
-        {EXAMPLES.map((q) => (
-          <a
-            key={q}
-            href={`?q=${encodeURIComponent(q)}`}
-            className={styles.exampleChip}
-          >
-            {q}
-          </a>
-        ))}
-      </div>
-      <Chat initialQuestion={initialQ} />
-    </main>
+    </div>
   )
 }

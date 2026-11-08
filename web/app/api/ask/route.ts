@@ -3,41 +3,11 @@ import type { AnswerType, AskEnvelope } from "@/lib/envelope"
 import { retrieve, type ChunkHit } from "@/lib/retriever"
 import { callGroq } from "@/lib/llm"
 import { SYSTEM_RULES, notFound } from "@/lib/prompts"
-
-// Minimal PII filter (runs before any upstream call). Phase 6 formalizes this
-// into web/lib/guardrails.ts with unit tests; this keeps FR7 safe today.
-const PII_PATTERNS = [
-  /\b[A-Z]{5}[0-9]{4}[A-Z]\b/,          // PAN
-  /\b\d{12}\b/,                          // Aadhaar
-  /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/, // email
-  /\b\d{13,19}\b/,                       // account-like numbers
-]
-
-function hasPii(text: string): boolean {
-  return PII_PATTERNS.some((re) => re.test(text))
-}
-
-// Simple intent classifier for type assignment when the model refuses.
-// Advice questions that pass the gate → refusal_advice; out-of-scope
-// questions that pass the gate but have no relevant facts → not_found.
-const ADVICE_PATTERNS = [
-  /\bshould\s+(i|you)\b/,
-  /\byou\s+should\b/,
-  /\b(i|we)\s+recommend\b/,
-  /\badvisable\b/,
-  /\bbetter\s+to\s+invest\b/,
-  /\bgood\s+(investment|choice|time)\b/,
-  /\bconsider\s+investing\b/,
-  /\bconsult\s+a\s+financial\b/,
-]
-
-function isAdviceQuestion(q: string): boolean {
-  return ADVICE_PATTERNS.some((re) => re.test(q.toLowerCase()))
-}
-
-function stripStamp(text: string): string {
-  return text.replace(/Last updated from sources:\s*\S+/g, "").trim()
-}
+import {
+  runGuardrails,
+  scrubPii,
+  classifyIntent,
+} from "@/lib/guardrails"
 
 const RETRIEVAL_K = Number(process.env.RETRIEVAL_K ?? "4")
 
@@ -64,11 +34,17 @@ function stripThink(text: string): string {
     .trim()
 }
 
-// Cap the answer at 3 sentences (defense in depth — the prompt already asks
-// for ≤3 sentences; this guarantees it).
 function capSentences(text: string): string {
   const parts = text.split(/(?:\. |\! |\? )/)
   return parts.slice(0, 3).join(". ").trim()
+}
+
+function stripStamp(text: string): string {
+  return text.replace(/Last updated from sources:\s*\S+/g, "").trim()
+}
+
+function isAdviceIntent(q: string): boolean {
+  return classifyIntent(q) === "advice"
 }
 
 function finalizeAnswer(
@@ -80,7 +56,6 @@ function finalizeAnswer(
   const answerBody = stripThink(raw)
   const refused = answerBody.includes("don't have that information")
 
-  // refusals carry no URL and no stamp
   if (refused) {
     const clean = answerBody
       .replace(/https?:\/\/\S+/g, "")
@@ -90,11 +65,10 @@ function finalizeAnswer(
       answer: clean,
       source: "",
       updated: "",
-      type: isAdviceQuestion(question) ? "refusal_advice" : "not_found",
+      type: isAdviceIntent(question) ? "refusal_advice" : "not_found",
     }
   }
 
-  // factual: body text only (≤3 sentences); citation lives in envelope fields
   const source = hits[0]?.url ?? ""
   const updated = hits[0]?.scraped_at?.slice(0, 10) ?? ""
   const body = capSentences(
@@ -112,22 +86,25 @@ export async function POST(req: Request): Promise<NextResponse> {
     // malformed body
   }
 
-  // 1. PII filter — runs first, nothing sent upstream
-  if (question && hasPii(question)) {
-    return NextResponse.json({
-      answer: REFUSAL_PII_PLACEHOLDER(),
-      source: "",
-      updated: "",
-      type: "refusal_pii",
-      chunks_used: 0,
-    })
-  }
-
   if (!question) {
     return NextResponse.json(
       { error: "missing question" },
       { status: 400 },
     )
+  }
+
+  // 1. Guardrails — PII filter + intent classify (run first, no upstream calls)
+  const piiResult = runGuardrails(question, "")
+  if (piiResult.intent === "pii") {
+    // eslint-disable-next-line no-console
+    console.log("[api/ask] guardrail: refusal_pii")
+    return NextResponse.json({
+      answer: piiResult.response!,
+      source: "",
+      updated: "",
+      type: "refusal_pii",
+      chunks_used: 0,
+    })
   }
 
   // 2-3. Embed + retrieve from Pinecone, then grounding gate
@@ -139,7 +116,7 @@ export async function POST(req: Request): Promise<NextResponse> {
     gatePassed = result.gatePassed
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.error("[api/ask] retrieval error:", err)
+    console.error("[api/ask] retrieval error:", scrubPii(String(err)))
     return NextResponse.json(
       {
         answer: "I'm unable to search my indexed sources right now. Please try again shortly.",
@@ -152,12 +129,29 @@ export async function POST(req: Request): Promise<NextResponse> {
     )
   }
 
+  const bestUrl = hits[0]?.url ?? ""
+
+  // Intent classify (advice / returns) — runs before LLM, zero LLM calls
+  const intentResult = runGuardrails(question, bestUrl)
+  if (intentResult.intent === "advice" || intentResult.intent === "returns") {
+    // eslint-disable-next-line no-console
+    console.log(`[api/ask] guardrail: ${intentResult.intent}`)
+    return NextResponse.json({
+      answer: intentResult.response!,
+      source: intentResult.intent === "returns" ? bestUrl : "",
+      updated: "",
+      type:
+        intentResult.intent === "advice" ? "refusal_advice" : "returns_redirect",
+      chunks_used: 0,
+    })
+  }
+
   // 4. grounding gate — no relevant chunk → honest not_found
   if (!gatePassed) {
-    const fb = notFound(hits[0]?.url ?? "")
+    const fb = notFound(bestUrl)
     return NextResponse.json({
       answer: fb,
-      source: hits[0]?.url ?? "",
+      source: bestUrl,
       updated: hits[0]?.scraped_at?.slice(0, 10) ?? "",
       type: "not_found",
       chunks_used: hits.length,
@@ -177,7 +171,7 @@ export async function POST(req: Request): Promise<NextResponse> {
     )
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.error("[api/ask] groq error:", err)
+    console.error("[api/ask] groq error:", scrubPii(String(err)))
     const isRateLimited = err instanceof Error && err.message.includes("429")
     return NextResponse.json(
       {
@@ -194,7 +188,12 @@ export async function POST(req: Request): Promise<NextResponse> {
   }
 
   // 6. Post-checks → final envelope
-  const { answer, source, updated, type } = finalizeAnswer(raw, hits, gatePassed, question)
+  const { answer, source, updated, type } = finalizeAnswer(
+    raw,
+    hits,
+    gatePassed,
+    question,
+  )
   return NextResponse.json({
     answer,
     source,
@@ -202,8 +201,4 @@ export async function POST(req: Request): Promise<NextResponse> {
     type,
     chunks_used: hits.length,
   })
-}
-
-function REFUSAL_PII_PLACEHOLDER(): string {
-  return "I can't handle that. Please don't share PAN, Aadhaar, account numbers, OTPs, emails, or phone numbers — I don't store or process personal data. Ask me a factual question about the indexed HDFC schemes instead."
 }
