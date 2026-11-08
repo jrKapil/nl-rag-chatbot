@@ -77,6 +77,9 @@
   color: var(--text-muted);
   font-weight: 500;
   margin-right: 4px;
+  line-height: 32px;
+  display: inline-flex;
+  align-items: center;
 }
 
 .exampleChip {
