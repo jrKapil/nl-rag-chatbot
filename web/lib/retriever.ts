@@ -13,7 +13,7 @@
  *   {id, cosine, text, url, scheme, section, scraped_at}
  */
 
-import { pipeline } from "@huggingface/transformers"
+import { env as hfEnv, pipeline } from "@huggingface/transformers"
 
 const EMB_MODEL = "Xenova/all-MiniLM-L6-v2" // ONNX-converted all-MiniLM-L6-v2 on HF Hub
 const DIM = 384
@@ -22,6 +22,8 @@ let _embedder: Awaited<ReturnType<typeof pipeline>> | null = null
 
 async function getEmbedder() {
   if (_embedder) return _embedder
+  // The Vercel deployment directory is read-only; only /tmp is writable.
+  if (process.env.VERCEL) hfEnv.cacheDir = "/tmp/transformers-cache"
   try {
     _embedder = await pipeline("feature-extraction", EMB_MODEL, {
       device: "cpu",
