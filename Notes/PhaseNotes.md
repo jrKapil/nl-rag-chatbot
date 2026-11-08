@@ -103,6 +103,16 @@ context-citation + advice-regex + refusal honesty.
 (0.5332 > 0.35) — the LLM refusal saved it (defense in depth). Threshold likely rises
 to ~0.5–0.6 after the full 10-query eval.
 
+## Phase 7 — Evaluation Gate (all FRs) — 2026-11-08 — DONE
+
+- `scripts/eval_qa.py`: 10-query PRD §8 eval set, paces requests 3s apart, writes `data/qa_samples.json` (D4)
+- Results: **10/10 PASS** (5 factual + 5 refusal/out-of-scope)
+- Chunking gate: **RECURSIVE SHIPS** (5/5 factual recall = 100%, ≥80% threshold)
+- SIM_THRESHOLD=0.35 confirmed adequate (all factual queries passed gate)
+- No advice/returns/PII violations detected
+- Refusal queries: 5/5 exact (advice, PII, returns, 2× not_found)
+- Artifact: `data/qa_samples.json` (D4 deliverable draft)
+
 ## Phase 6 — Guardrails (FR6–FR8) — 2026-11-08 — DONE
 
 - `web/lib/guardrails.ts`: PII filter (PAN, Aadhaar, email, OTP, account #),

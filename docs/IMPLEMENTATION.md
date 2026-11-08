@@ -181,13 +181,13 @@ python -m scripts.ingest --no-scrape     # FR12: rebuild index from raw
 **Goal:** Run the PRD §8 10-query set through the dev deployment. Output = the formal recall measurement that decides whether recursive chunking ships or the semantic fallback must be built. This is the most important phase for the tech-report deliverable.
 
 ### Tasks
-- [ ] `scripts/eval_qa.py`: run each query against the local dev `/api/ask`, capture envelope, report per-query pass/fail with the pass criteria:
+- [x] `scripts/eval_qa.py`: run each query against the local dev `/api/ask`, capture envelope, report per-query pass/fail with the pass criteria:
   - factual: correct fact present + exactly one whitelisted URL + ≤3 sentences;
   - refusal: correct `type` + expected extras.
-- [ ] Metrics printed as a table; artifacts written to `data/qa_samples.json` (final **deliverable D4** content).
-- [ ] **Chunking gate (ARCHITECTURE §5.3):** if recall < 8/10 → build semantic chunking fallback, re-ingest, re-run eval. Document the delta in a short notes file (this is report-gold for the submission). Do not tune anything else first.
-- [ ] Retune `SIM_THRESHOLD` from measured distributions, not intuition (look at Phase 2 smoke scores vs Phase 7 failures).
-- [ ] Guard: rate limits — pace requests in eval (≥3 s apart); 10 queries ≈ 15K tokens ≈ 2% of daily TPD (safe).
+- [x] Metrics printed as a table; artifacts written to `data/qa_samples.json` (final **deliverable D4** content).
+- [x] **Chunking gate (ARCHITECTURE §5.3):** if recall < 8/10 → build semantic chunking fallback, re-ingest, re-run eval. Document the delta in a short notes file (this is report-gold for the submission). Do not tune anything else first.
+- [x] Retune `SIM_THRESHOLD` from measured distributions, not intuition (look at Phase 2 smoke scores vs Phase 7 failures).
+- [x] Guard: rate limits — pace requests in eval (≥3 s apart); 10 queries ≈ 15K tokens ≈ 2% of daily TPD (safe).
 
 ### Exit gate (the ship gate)
 - ≥ 8/10 factual queries pass with clean citations;

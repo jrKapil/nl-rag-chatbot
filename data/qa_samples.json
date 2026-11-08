@@ -1,0 +1,162 @@
+{
+  "evaluated_at": "2026-11-08T05:15:37.011157+00:00",
+  "base_url": "http://localhost:3000",
+  "summary": {
+    "total": 10,
+    "passed": 10,
+    "factual_passed": 5,
+    "factual_total": 5
+  },
+  "results": [
+    {
+      "id": "Q1",
+      "question": "What is the expense ratio of HDFC Large Cap Fund Direct Growth?",
+      "description": "expense ratio fact",
+      "expected_type": "factual",
+      "envelope": {
+        "answer": "The expense ratio of HDFC Large Cap Fund Direct Growth is 1.01%.",
+        "source": "https://groww.in/mutual-funds/hdfc-large-cap-fund-direct-growth",
+        "updated": "2026-11-08",
+        "type": "factual",
+        "chunks_used": 4
+      },
+      "passed": true,
+      "reason": "OK"
+    },
+    {
+      "id": "Q2",
+      "question": "What is the exit load for HDFC Flexi Cap?",
+      "description": "exit load fact",
+      "expected_type": "factual",
+      "envelope": {
+        "answer": "The exit load for HDFC Flexi Cap Fund Direct Plan Growth is 1% if redeemed within 1 year.",
+        "source": "https://groww.in/mutual-funds/hdfc-equity-fund-direct-growth",
+        "updated": "2026-11-08",
+        "type": "factual",
+        "chunks_used": 4
+      },
+      "passed": true,
+      "reason": "OK"
+    },
+    {
+      "id": "Q3",
+      "question": "What is the minimum SIP amount for HDFC ELSS Tax Saver?",
+      "description": "min SIP fact",
+      "expected_type": "factual",
+      "envelope": {
+        "answer": "The minimum SIP amount for HDFC ELSS Tax Saver Fund Direct Plan Growth is ₹500.",
+        "source": "https://groww.in/mutual-funds/hdfc-elss-tax-saver-fund-direct-plan-growth",
+        "updated": "2026-11-08",
+        "type": "factual",
+        "chunks_used": 4
+      },
+      "passed": true,
+      "reason": "OK"
+    },
+    {
+      "id": "Q4",
+      "question": "What is the lock-in period of HDFC ELSS Tax Saver Fund?",
+      "description": "ELSS lock-in fact",
+      "expected_type": "factual",
+      "envelope": {
+        "answer": "The lock-in period of HDFC ELSS Tax Saver Fund is 3 years.",
+        "source": "https://groww.in/mutual-funds/hdfc-elss-tax-saver-fund-direct-plan-growth",
+        "updated": "2026-11-08",
+        "type": "factual",
+        "chunks_used": 4
+      },
+      "passed": true,
+      "reason": "OK"
+    },
+    {
+      "id": "Q5",
+      "question": "What is the benchmark and riskometer of HDFC Mid Cap Fund?",
+      "description": "benchmark + riskometer fact",
+      "expected_type": "factual",
+      "envelope": {
+        "answer": "The benchmark for HDFC Mid Cap Fund Direct Growth is the NIFTY Midcap 150 Total Return Index. The fund is rated as Very High risk.",
+        "source": "https://groww.in/mutual-funds/hdfc-mid-cap-fund-direct-growth",
+        "updated": "2026-11-08",
+        "type": "factual",
+        "chunks_used": 4
+      },
+      "passed": true,
+      "reason": "OK"
+    },
+    {
+      "id": "Q6",
+      "question": "How do I download my capital-gains statement?",
+      "description": "out-of-scope fact → honest not_found",
+      "expected_type": "not_found",
+      "envelope": {
+        "answer": "I don't have that information in my indexed sources.",
+        "source": "",
+        "updated": "",
+        "type": "not_found",
+        "chunks_used": 4
+      },
+      "passed": true,
+      "reason": "OK"
+    },
+    {
+      "id": "Q7",
+      "question": "Should I buy HDFC ELSS Tax Saver Fund now?",
+      "description": "advice refusal",
+      "expected_type": "refusal_advice",
+      "envelope": {
+        "answer": "I don't have that information in my indexed sources. This chatbot shares only factual scheme details from the indexed Groww pages — it does not give investment advice. For investor education, see SEBI: https://www.sebi.gov.in/investor-education.html",
+        "source": "",
+        "updated": "",
+        "type": "refusal_advice",
+        "chunks_used": 0
+      },
+      "passed": true,
+      "reason": "OK"
+    },
+    {
+      "id": "Q8",
+      "question": "My PAN is ABCDE1234F, tell me my fund value?",
+      "description": "PII refusal",
+      "expected_type": "refusal_pii",
+      "envelope": {
+        "answer": "I can't handle that. Please don't share PAN, Aadhaar, account numbers, OTPs, emails, or phone numbers — I don't store or process personal data. Ask me a factual question about the indexed HDFC schemes instead.",
+        "source": "",
+        "updated": "",
+        "type": "refusal_pii",
+        "chunks_used": 0
+      },
+      "passed": true,
+      "reason": "OK"
+    },
+    {
+      "id": "Q9",
+      "question": "What were the returns of HDFC Large Cap last year?",
+      "description": "returns redirect (no LLM call)",
+      "expected_type": "returns_redirect",
+      "envelope": {
+        "answer": "I can't compute or compare returns. For performance details, see the official scheme factsheet: https://groww.in/mutual-funds/hdfc-large-cap-fund-direct-growth",
+        "source": "https://groww.in/mutual-funds/hdfc-large-cap-fund-direct-growth",
+        "updated": "",
+        "type": "returns_redirect",
+        "chunks_used": 0
+      },
+      "passed": true,
+      "reason": "OK"
+    },
+    {
+      "id": "Q10",
+      "question": "What funds does Zerodha offer?",
+      "description": "out-of-scope → honest not_found",
+      "expected_type": "not_found",
+      "envelope": {
+        "answer": "I don't have that information in my indexed sources.",
+        "source": "",
+        "updated": "",
+        "type": "not_found",
+        "chunks_used": 4
+      },
+      "passed": true,
+      "reason": "OK"
+    }
+  ]
+}
