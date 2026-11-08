@@ -47,15 +47,17 @@ export default async function Home({
 
         <div className={styles.examples}>
           <span className={styles.examplesLabel}>Try:</span>
-          {EXAMPLES.map((q) => (
-            <a
-              key={q}
-              href={`?q=${encodeURIComponent(q)}`}
-              className={styles.exampleChip}
-            >
-              {q}
-            </a>
-          ))}
+          <div className={styles.chips}>
+            {EXAMPLES.map((q) => (
+              <a
+                key={q}
+                href={`?q=${encodeURIComponent(q)}`}
+                className={styles.exampleChip}
+              >
+                {q}
+              </a>
+            ))}
+          </div>
         </div>
 
         <div className={styles.card}>
