@@ -22,13 +22,16 @@ function env(key: string, fallback?: string): string {
 }
 
 export async function embedQuery(text: string): Promise<number[]> {
-  const hfToken = env("HF_TOKEN")
+  const hfToken = (process.env as Record<string, string>).HF_TOKEN
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  }
+  if (hfToken) {
+    headers["Authorization"] = `Bearer ${hfToken}`
+  }
   const res = await fetch(HF_INFERENCE_URL, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${hfToken}`,
-      "Content-Type": "application/json",
-    },
+    headers,
     body: JSON.stringify({ inputs: text }),
   })
   if (!res.ok) {
