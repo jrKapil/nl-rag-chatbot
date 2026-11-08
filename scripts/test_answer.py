@@ -39,10 +39,11 @@ SYSTEM_PROMPT = """You answer questions about HDFC mutual funds using ONLY the n
 Rules (violations are failures):
 1. Use only facts stated in the context passages. Never invent, estimate, or compute numbers.
 2. Answer in at most 3 sentences. Be direct and factual.
-3. End with the source: exactly one URL on its own final line, chosen from the context passages' URLs. Never any other URL.
-4. If the context does not contain the answer, or if the question asks for advice or a comparison, reply exactly: I don't have that information in my indexed sources. — with NO URL afterward.
-5. No investment advice, recommendations, or comparisons between funds. No disclaimers beyond the required source line.
-6. Answer as plain text. Do not use markdown, headings, or bullet lists."""
+3. End with exactly one source URL on its own final line, chosen from the context passages' URLs. Never any other URL.
+4. On the line immediately after the source URL, add the source freshness stamp: Last updated from sources: YYYY-MM-DD — using the scraped_at date of the cited source passage shown in context.
+5. If the context does not contain the answer, or if the question asks for advice or a comparison, reply exactly: I don't have that information in my indexed sources. — with NO URL and no stamp afterward.
+6. No investment advice, recommendations, or comparisons between funds. No disclaimers beyond the required source line.
+7. Answer as plain text. Do not use markdown, headings, or bullet lists."""
 USER_TMPL = """Context passages:
 {ctx}
 
@@ -74,7 +75,7 @@ def retrieve(query: str, k: int) -> dict:
 def build_context(hits: list[dict]) -> str:
     blocks = []
     for i, h in enumerate(hits, 1):
-        blocks.append(f"[{i}] source: {h['url']}\ntext: {h['text']}")
+        blocks.append(f"[{i}] source: {h['url']} (scraped_at: {h['scraped_at']})\ntext: {h['text']}")
     return "\n\n".join(blocks)
 
 
@@ -124,13 +125,22 @@ def strip_think(text: str) -> str:
     return text.strip()
 
 
+def last_updated_line(hits: list[dict]) -> str:
+    """Deterministic source freshness stamp from the top hit's scraped_at."""
+    ts = hits[0]["scraped_at"] if hits else ""
+    date = ts[:10] if ts else ""
+    return f"Last updated from sources: {date}" if date else ""
+
+
 def post_checks(answer: str, hits: list[dict], gate_cos: float,
                 sim_threshold: float, label: str) -> dict:
     checks = {}
     refused = "don't have that information" in answer
 
     # 1. <=3 sentences (exclude final URL line)
-    body = "\n".join(l for l in answer.splitlines() if not l.strip().startswith("http"))
+    body = "\n".join(l for l in answer.splitlines()
+                     if not l.strip().startswith("http")
+                     and not l.startswith("Last updated from sources:"))
     sents = [s for s in re.split(r"(?<=[.!?])\s+", body.strip()) if s.strip()]
     checks["<=3 sentences"] = len(sents) <= 3
 
@@ -143,11 +153,15 @@ def post_checks(answer: str, hits: list[dict], gate_cos: float,
     checks["URL from context"] = refused or (
         bool(urls) and any(any(cu in u for cu in ctx_urls) for u in urls))
 
-    # 3. no advice phrasing
+    # 3. freshness stamp present for real answers
+    stamp = last_updated_line(hits)
+    checks["last updated stamp"] = refused or (
+        bool(stamp) and any(l.startswith(stamp.split(": ")[0] + ":") for l in answer.splitlines()))
+
+    # 4. no advice phrasing
     checks["no advice"] = not ADVICE_RE.search(answer)
 
-    # 4. refusal honesty: refusing is correct when retrieval was weak OR the
-    # question is advice-style; refusing a well-retrieved FACT question is a fail
+    # 5. refusal honesty
     weak = gate_cos < sim_threshold
     if refused:
         checks["gate consistent"] = weak or label != "fact" or gate_cos < 0.75
@@ -182,6 +196,12 @@ def run_case(label: str, q: str, k: int, sim_threshold: float) -> None:
         print(f"  GROQ ERROR: {e}")
         return
     answer = strip_think(raw)
+    # deterministic freshness stamp (metadata, not generation) — only for
+    # real answers; refusals carry no source line and no stamp
+    refused = "don't have that information" in answer
+    stamp = last_updated_line(r["hits"])
+    if stamp and not refused and not any(l.startswith("Last updated from sources:") for l in answer.splitlines()):
+        answer = answer.rstrip() + "\n" + stamp
     checks = post_checks(answer, r["hits"], gate_cos, sim_threshold, label)
     print(f"  model: {meta['model']} | latency {meta['latency_s']}s | "
           f"usage {meta['usage'].get('completion_tokens', '?')}ct out | reasoning_len {meta['reasoning_len']}")

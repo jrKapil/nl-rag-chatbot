@@ -8,6 +8,13 @@ bit-identical vectors and retrieval results to the local Chroma index. E2E smoke
 Pinecone via `scripts/test_answer.py` (VECTOR_DB=pinecone). Local Chroma (`CHROMA_MODE=local`)
 kept intact for dev tooling; `scripts/show_index.py` unchanged.
 
+**Source freshness stamp (FR10)** — added 2026-11-08:
+Every answer now carries a deterministic `Last updated from sources: YYYY-MM-DD`
+line right after the citation URL, derived from the cited chunk's `scraped_at`
+metadata (not generation). Refusals carry no URL and no stamp. `build_context()`
+in both `retrieve.py` and `pinecone_store.py` exposes `scraped_at` per hit;
+`test_answer.py` appends the stamp and `post_checks` verifies it.
+
 ## Phase 2 — Ingestion pipeline (2026-11-08)
 
 **Commands that work:**

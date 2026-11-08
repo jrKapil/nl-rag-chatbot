@@ -151,6 +151,7 @@ def _norm_hits(res: dict) -> list[dict]:
             "url": md.get("url", ""),
             "scheme": md.get("scheme_name", ""),
             "section": md.get("section", ""),
+            "scraped_at": md.get("scraped_at", ""),
         })
     return hits
 

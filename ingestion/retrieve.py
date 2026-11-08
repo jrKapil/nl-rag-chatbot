@@ -30,6 +30,7 @@ def query_top_k(query: str, k: int) -> list[dict]:
                 "url": md["url"],
                 "scheme": md["scheme_name"],
                 "section": md["section"],
+                "scraped_at": md["scraped_at"],
             })
         return hits
     raise ValueError(f"Unknown VECTOR_DB backend: {backend}")
