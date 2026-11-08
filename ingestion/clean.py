@@ -25,8 +25,9 @@ DROP_TAGS = (
     "button", "input", "select", "textarea", "template",
 )
 # Groww doesn't always use semantic <footer>/<header>; huge site chrome is in
-# <div class="footerTopSection...">, cookie banners, etc. Drop by class token.
-BOILER_CLASS_RE = re.compile(r"^(footer|cookie|breadcrumb|banner|drawer|modal|advert)", re.I)
+# <div class="footerTopSection...">, cookie banners, mega-menu dropdowns, etc.
+BOILER_CLASS_RE = re.compile(r"^(footer|cookie|breadcrumb|banner|drawer|modal|advert|dropdown)", re.I)
+KEY_FACTS_RE = re.compile(r"^fundDetails", re.I)
 HEADING_TAGS = {"h1", "h2", "h3", "h4", "h5", "h6"}
 
 _WS = re.compile(r"[ \t\xa0]+")
@@ -37,6 +38,34 @@ _NEWLINES = re.compile(r"\n{3,}")
 # page's own structured payload — provenance is identical; see PRD §4 note.
 _LOCKIN_RE = re.compile(r'"lock_in":\s*\{\s*"years":\s*(\d+)')
 _LOCKIN_YRS_RE = re.compile(r'"lock_in_yrs":\s*(\d+)')
+
+
+# Tooltip "glosses" Groww renders beneath stats headers — they define terms but
+# state no scheme facts. Known-text drop keeps retrieval slots for real facts.
+GLOSS_PATTERNS = (
+    "A fee payable to a mutual fund house for managing your mutual fund investment",
+    "A fee payable to a mutual fund house for exiting a fund",
+    "The total return of a mutual fund over a given period",
+    "Average of the yearly returns of a mutual fund over a given period",
+    "A percentage of your capital gains payable to the government upon exit",
+    "A form of tax payable for the purchase or sale of an asset or security",
+)
+
+
+def _is_gloss(sec: dict[str, str]) -> bool:
+    text = sec.get("text", "")
+    if len(text) > 400:
+        return False
+    return any(p in text for p in GLOSS_PATTERNS)
+
+
+def _is_returns_card(sec: dict[str, str]) -> bool:
+    """AMC-page per-fund cards that state only returns — out of scope by design
+    (PRD: no computed/compared returns; they also crowd retrieval slots)."""
+    text = sec.get("text", "")
+    if len(text) > 600:
+        return False
+    return "Fund Performance:" in text or "annualized returns for the past" in text.lower()
 
 
 def structured_extras(html_doc: str) -> dict[str, str]:
@@ -75,6 +104,18 @@ def _strip_boilerplate(soup: BeautifulSoup) -> None:
         tag.decompose()
 
 
+def _find_key_facts_strip(soup: BeautifulSoup) -> Tag | None:
+    """Smallest fundDetails_* wrapper holding the metric strip
+    (NAV / AUM / Expense ratio / Min SIP / Rating)."""
+    cands = [
+        el for el in soup.find_all(class_=KEY_FACTS_RE)
+        if "Expense ratio" in el.get_text() and "AUM" in el.get_text()
+    ]
+    if not cands:
+        return None
+    return min(cands, key=lambda t: len(list(t.descendants)))
+
+
 def extract_sections(html_doc: str) -> tuple[str, list[dict[str, str]]]:
     """Extract page title and heading-anchored sections from raw HTML.
 
@@ -89,6 +130,16 @@ def extract_sections(html_doc: str) -> tuple[str, list[dict[str, str]]]:
         c.extract()
     _strip_boilerplate(soup)
 
+    # carve the metric strip into its own section so its chunk isn't drowned
+    # by overview/nav text; then remove it from the flow
+    key_facts_text = ""
+    strip_el = _find_key_facts_strip(soup)
+    if strip_el is not None:
+        key_facts_text = _norm(strip_el.get_text("\n", strip=True))
+        if "Expense ratio" not in key_facts_text or "AUM" not in key_facts_text:
+            key_facts_text = ""  # sanity; keep only if it still reads as facts
+        strip_el.decompose()
+
     title = ""
     if soup.h1:
         title = _norm(soup.h1.get_text(" ", strip=True))
@@ -98,6 +149,11 @@ def extract_sections(html_doc: str) -> tuple[str, list[dict[str, str]]]:
     sections: list[dict[str, str]] = []
     if title:
         sections.append({"title": "Page Overview", "text": title})
+    if key_facts_text:
+        sections.append(
+            {"title": "Key facts: NAV, AUM, Expense ratio, Min SIP",
+             "text": key_facts_text}
+        )
 
     body = soup.body if soup.body else soup
 
@@ -127,6 +183,10 @@ def extract_sections(html_doc: str) -> tuple[str, list[dict[str, str]]]:
         s["text"] = _norm(s.get("text", ""))
         if not s["title"] or not s["text"] or s["title"] in seen:
             continue
+        if _is_gloss(s):
+            continue  # tooltip definition, no facts — pollutes retrieval
+        if _is_returns_card(s):
+            continue  # returns-only card — out of scope (PRD no-returns)
         seen.add(s["title"])
         cleaned.append(s)
     return title, cleaned

@@ -15,6 +15,14 @@ Tracks ARCHITECTURE.md §14 open items + IMPLEMENTATION.md phase-dependent crede
         - API key created (ingest/write key on dev machine): *TBD*
         - Read-only key created (Vercel function, least privilege — ARCHITECTURE §11): *TBD*
 
+## Phase 1 — naming conventions (note)
+
+- Raw files are named by **URL slug** (e.g. `hdfc-equity-fund-direct-growth.*` = HDFC
+  Flexi Cap Fund — Groww serves that scheme under the legacy "equity fund" URL).
+  Human-readable names live in `manifest.json` and `data/sources.csv/.md` (D2).
+- Scraped data is a **static snapshot**; no live fetching at query time. Staleness
+  is handled by FR12 re-ingestion + the "Last updated from sources" stamp (FR10).
+
 ## Phase 3 — during cloud switch
 
 - [ ] Confirm Chroma Cloud write path from Python client (explicit embeddings upload, no auto-embed).

@@ -131,6 +131,33 @@ def scrape_page(page: SourcePage) -> dict:
     return entry
 
 
+def rebuild_texts() -> None:
+    """Regenerate .txt/.sections.json from stored HTML (no network).
+
+    Used when the extractor changes after a scrape; keeps raw HTML as truth.
+    """
+    manifest_path = DATA_RAW / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.exists() else []
+    by_slug = {m["slug"]: m for m in manifest}
+    for page in SOURCE_PAGES:
+        html_path = DATA_RAW / f"{page.slug}.html"
+        if not html_path.exists():
+            print(f"[retext] no stored HTML for {page.slug}; skipping")
+            continue
+        title, flat_text, sections = build_document(html_path.read_text(encoding="utf-8"))
+        (DATA_RAW / f"{page.slug}.txt").write_text(flat_text, encoding="utf-8")
+        (DATA_RAW / f"{page.slug}.sections.json").write_text(
+            json.dumps({"title": title, "sections": sections}, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        m = by_slug.get(page.slug)
+        checks = fact_check(page.slug, flat_text)
+        missing = [k for k, ok in checks.items() if not ok]
+        mark = "OK  " if not missing else f"MISSING {missing}"
+        extra = f", {len(sections)} sections" if m else ""
+        print(f"[{mark}] {page.slug}: rebuilt{extra}")
+
+
 def run() -> None:
     DATA_RAW.mkdir(parents=True, exist_ok=True)
     manifest: list[dict] = []
