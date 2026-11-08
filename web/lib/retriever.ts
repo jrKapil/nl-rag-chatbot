@@ -11,7 +11,7 @@
 
 const EMB_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 const DIM = 384
-const HF_INFERENCE_URL = `https://api-inference.huggingface.co/models/${EMB_MODEL}`
+const HF_INFERENCE_URL = `https://router.huggingface.co/hf-inference/models/${EMB_MODEL}`
 
 function env(key: string, fallback?: string): string {
   const v = (process.env as Record<string, string>)[key]
@@ -29,24 +29,42 @@ export async function embedQuery(text: string): Promise<number[]> {
   if (hfToken) {
     headers["Authorization"] = `Bearer ${hfToken}`
   }
-  const res = await fetch(HF_INFERENCE_URL, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ inputs: text }),
-  })
-  if (!res.ok) {
-    const body = await res.text().catch(() => "")
-    throw new Error(`HF Inference ${res.status}: ${body.slice(0, 300)}`)
+
+  // Retry up to 3 times (HF Inference cold-starts the model on first request)
+  let lastError: Error | null = null
+  for (let attempt = 0; attempt < 3; attempt++) {
+    let res: Response
+    try {
+      res = await fetch(HF_INFERENCE_URL, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ inputs: text }),
+      })
+    } catch (err) {
+      lastError = new Error(`HF Inference fetch failed: ${err instanceof Error ? err.message : String(err)}`)
+      await new Promise((r) => setTimeout(r, 2000))
+      continue
+    }
+    if (res.status === 503) {
+      // Model loading — wait and retry
+      await new Promise((r) => setTimeout(r, 5000))
+      continue
+    }
+    if (!res.ok) {
+      const body = await res.text().catch(() => "")
+      throw new Error(`HF Inference ${res.status}: ${body.slice(0, 300)}`)
+    }
+    const data = await res.json()
+    // HF Inference returns [[...384 floats]] for a single input
+    const vec: number[] = Array.isArray(data[0]) ? data[0] : data
+    if (vec.length !== DIM) {
+      throw new Error(`embedding dim mismatch: expected ${DIM}, got ${vec.length}`)
+    }
+    // normalize (HF returns unnormalized embeddings; fastembed normalizes)
+    const norm = Math.sqrt(vec.reduce((s, v) => s + v * v, 0))
+    return vec.map((v) => v / norm)
   }
-  const data = await res.json()
-  // HF Inference returns [[...384 floats]] for a single input
-  const vec: number[] = Array.isArray(data[0]) ? data[0] : data
-  if (vec.length !== DIM) {
-    throw new Error(`embedding dim mismatch: expected ${DIM}, got ${vec.length}`)
-  }
-  // normalize (HF returns unnormalized embeddings; fastembed normalizes)
-  const norm = Math.sqrt(vec.reduce((s, v) => s + v * v, 0))
-  return vec.map((v) => v / norm)
+  throw lastError ?? new Error("HF Inference: max retries exceeded")
 }
 
 function pineconeHeaders(): HeadersInit {
@@ -73,16 +91,21 @@ export async function queryPinecone(
   vector: number[],
   topK: number,
 ): Promise<ChunkHit[]> {
-  const res = await fetch(`https://${PINECONE_HOST}/query`, {
-    method: "POST",
-    headers: pineconeHeaders(),
-    body: JSON.stringify({
-      vector,
-      topK,
-      includeMetadata: true,
-      namespace: "",
-    }),
-  })
+  let res: Response
+  try {
+    res = await fetch(`https://${PINECONE_HOST}/query`, {
+      method: "POST",
+      headers: pineconeHeaders(),
+      body: JSON.stringify({
+        vector,
+        topK,
+        includeMetadata: true,
+        namespace: "",
+      }),
+    })
+  } catch (err) {
+    throw new Error(`Pinecone fetch failed: ${err instanceof Error ? err.message : String(err)}`)
+  }
   if (!res.ok) {
     throw new Error(`Pinecone query ${res.status}: ${await res.text()}`)
   }

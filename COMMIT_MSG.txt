@@ -1,0 +1,7 @@
+Fix Vercel 500: switch HF Inference to router endpoint + retry on 503 + make HF_TOKEN optional
+
+- retriever.ts: use router.huggingface.co/hf-inference endpoint (new URL)
+- embedQuery: retry up to 3 times (503 model loading, fetch failures)
+- HF_TOKEN optional (public model, works without token)
+- Better error messages to identify HF vs Pinecone failures
+- Verified: npm run build passes, vitest 25/25 pass
