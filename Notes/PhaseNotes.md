@@ -51,3 +51,39 @@ Similarity spread: min 0.593 / avg 0.727 / max 0.888 → initial `SIM_THRESHOLD=
 - Key facts chunk: NAV, AUM, Expense ratio (current), Min SIP, Rating
 - "About …" chunk: launch date, AUM, NAV, risk level, Min SIP, Min Lumpsum, Exit load
 - "Exit Load"/"Minimum investments" chunks: dated exit-load history, SIP/Lumpsum mins
+
+## Local E2E LLM test (pre-Phase 3, 2026-11-08) — GROQ ONLINE
+
+**Setup:** `.env.local` (gitignored): `GROQ_API_KEY`, `GROQ_MODEL=qwen/qwen3.8-27b`,
+`CHROMA_MODE=local`, `RETRIEVAL_K=4`, `SIM_THRESHOLD=0.35`.
+Runner: `python -m scripts.test_answer` (mirrors §6.1 exactly; ad-hoc question via argv).
+
+**Groq gotchas (for report + TS port):**
+1. Groq sits behind Cloudflare: requests with python's default User-Agent get
+   **HTTP 403 / Cloudflare error 1010** regardless of key validity. Must send a
+   browser-like UA. The Next.js server-side fetch sends node/undici UA — verify
+   it is NOT blocked during Phase 5; if it is, add UA header there too.
+2. `qwen/qwen3.8-27b` is live on the free tier alongside gpt-oss-120b/20b,
+   llama-prompt-guard, whisper. NO thinking blocks observed at temp 0.1 —
+   `reasoning_len 0` across all runs despite qwen3 family. No strip needed but
+   the code keeps the defensive <think>...</think> stripper.
+3. Free-tier latency: ~0.2–0.45s end-to-end per answer (local). ~40 completion tokens typical.
+
+**Results — 6/6 PASS (4 fact, 1 advice-refusal, 1 unknown-scheme-refusal):**
+| Case | Answer | Verdict |
+|---|---|---|
+| expense ratio Large Cap | "1.01%" + correct URL | all OK |
+| exit load Flexi Cap | "1% if redeemed within 1 year" | all OK |
+| ELSS lock-in | "3 years" | all OK |
+| Min SIP Mid Cap | "₹100" | all OK |
+| advice (ELSS vs Mid Cap) | refusal, no URL | all OK |
+| NAV of ICICI fund (out of corpus) | refusal, no URL | all OK |
+
+**Prompt contract locked (Phase 5 must replicate):** grounded-only, ≤3 sentences, final
+line = exactly one URL taken from the retrieved chunks' metadata, refusal sentence is bare
+(no URL), no advice phrasing. Post-checks verify sentence count + citation whitelist +
+context-citation + advice-regex + refusal honesty.
+
+**Known tuning item (Phase 7):** retrieval gate passed the "unknown ICICI" query
+(0.5332 > 0.35) — the LLM refusal saved it (defense in depth). Threshold likely rises
+to ~0.5–0.6 after the full 10-query eval.
